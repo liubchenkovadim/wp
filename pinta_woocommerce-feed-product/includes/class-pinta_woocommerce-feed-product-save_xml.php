@@ -9,7 +9,7 @@ class Pinta_woocommerce_Feed_Product_save_xml
 
     public function list_category()
     {
-        $save_list = $this->get_setting_feed(1);
+        $save_list = $this->get_setting_feed("category");
         if (empty($save_list)) {
             $save_list = array();
         }
@@ -22,15 +22,19 @@ class Pinta_woocommerce_Feed_Product_save_xml
         foreach ($categories as $category) {
             $value = '';
 
-            if (!empty($save_list)) {
-                if (in_array($category->name, $save_list) == true) {
-                    $value = 'value = "1" checked';
+            foreach ($save_list as $val){
+
+                    if ($category->name == $val["category_name"])  {
+                        $value = 'value = "1" checked';
+                        break;
+                    }
                 }
-            }
-$name =$category->name;
+
+
+            $name = $category->name;
 
             $list[] = '<li class="choose"><label>
-          <input type="checkbox" id="' . $category->name . '" name="category_list[' . $category->name . ']" ' . $value . ' > ' . $category->name . '</label>'.$this->cat_gogle_first($name).'
+          <input type="checkbox" class="i_che" id="' . $category->name . '" name="category_list[' . $category->name . ']" ' . $value . ' > ' . $category->name . '</label>' . $this->cat_gogle_first($name) . '
          </li>';
 
         }
@@ -44,85 +48,110 @@ $name =$category->name;
         global $wpdb;
         $table = $wpdb->prefix . 'pinta_feed_product_google_category';
 
-        $sql = "SELECT `category_name`, `value` FROM ".$table." WHERE category_list='".$cat."' ";
-       
-         $list = $wpdb->get_results($sql,ARRAY_A); 
-         unset($list[0]);
-         $res = json_encode($list);
-         echo $res;
+        $sql = "SELECT `category_name`, `value` FROM " . $table . " WHERE category_list='" . $cat . "' ";
 
-         
+        $list = $wpdb->get_results($sql, ARRAY_A);
+        unset($list[0]);
+        $res = json_encode($list);
+        echo $res;
+
 
     }
 
     public function cat_gogle_first($name)
     {
-        $first_list = $this->list_category_facebook();
-        $select = "<select class='g_cat' >";
-           $select .= "<option selected value='0' >--select--</option>";
+        $setting = $this->get_setting_feed("radio");
+
+        if ($setting[0]['category_name'] === "facebook") {
+            $first_list = $this->list_category_facebook();
+
+            $select = "<select class='g_cat' >";
+            $select .= "<option selected value='0' >--select--</option>";
 
             foreach ($first_list as $value) {
-                $select .= "<option  value=".$value['value'].">".$value['category_list']."</option>";
+                $select .= "<option  value=" . $value['value'] . ">" . $value['category_list'] . "</option>";
             }
             $select .= "</select>
-<select class='select_t' name='category_gogle[".$name."]' ><option  value='0' >--select--</option></select>
+<select class='select_t' name='category_google[" . $name . "]' data-category='" . $name . "'><option  value='0' >--select--</option></select>
             ";
             return $select;
+        }
+        return '';
     }
-
-   public function list_category_facebook()
+    public function list_category_facebook()
     {
         global $wpdb;
-        $setting = $this->get_setting_feed(5);
-        if($setting === "facebook"){
-             $table = $wpdb->prefix . 'pinta_feed_product_google_category';
-             $sql = "SELECT `category_list`,`value` FROM ".$table." WHERE 1 GROUP BY category_list";
-            $first_list = $wpdb->get_results($sql,ARRAY_A); 
-            
-          return $first_list;
+        $setting = $this->get_setting_feed("radio");
+
+        if ($setting[0]['category_name'] === "facebook") {
+            $table = $wpdb->prefix . 'pinta_feed_product_google_category';
+            $sql = "SELECT `category_list`,`value` FROM " . $table . " WHERE 1 GROUP BY category_list";
+
+            $first_list = $wpdb->get_results($sql, ARRAY_A);
+
+
+            return $first_list;
 
         } else {
             return;
         }
     }
+
     public function generate_category()
     {
-         global $wpdb;
+        global $wpdb;
         $table = $wpdb->prefix . 'pinta_feed_product_google_category';
-        $url ='https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt';
-$ch = curl_init();  
-curl_setopt($ch, CURLOPT_URL, $url); 
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_VERBOSE, 0);       
+        $url = 'https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt';
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_VERBOSE, 0);
 
-$page = curl_exec($ch); 
-curl_close($ch); 
-$google_category =explode("\n", $page);
-unset($google_category[0]);
-$newres =array_pop($google_category);
-$sql = "INSERT INTO ".$table." ( `value`,`category_list`, `category_name`) VALUES ";
-foreach ($google_category as $value) {
-    $str = explode("-",$value);
-    $a =$str[1];
-    $list = explode(">", $str[1]);
-    $k =$list[0];
-    $sql .= "(".$str[0].",\"".$k."\",\"".$a."\"),";
-   
-}
-$sql2 = mb_substr($sql, 0, -1);
+        $page = curl_exec($ch);
+        curl_close($ch);
+        $google_category = explode("\n", $page);
+        unset($google_category[0]);
+        $newres = array_pop($google_category);
+        $sql = "INSERT INTO " . $table . " ( `value`,`category_list`, `category_name`) VALUES ";
+        foreach ($google_category as $value) {
+            $str = explode("-", $value);
+            $a = $str[1];
+            $list = explode(">", $str[1]);
+            $k = $list[0];
+            $sql .= "(" . $str[0] . ",\"" . $k . "\",\"" . $a . "\"),";
+
+        }
+        $sql2 = mb_substr($sql, 0, -1);
 
 
-        $wpdb->query($sql2);    
+        $wpdb->query($sql2);
 
 // $wpdb->insert($table, ['id' => 1,'category'=>"1212121"]);
         return;
+    }
+
+    public function  save_csv()
+    {
+
+        $datas = $this->greateData();
+        var_dump($datas);
+        $name = $_POST['name'];
+        $fp = fopen($name.'.csv', 'r');
+        $str = "Model,Title,Quantity,Price".PHP_EOL;
+        foreach ($datas as $data){
+            $str .= $data['brand'].",".$data['title'].",".$data['quantity'].",".$data['price'].PHP_EOL;
+        }
+        $test = fwrite($fp, $str); // Запись в файл
+        if ($test) echo 'Данные в файл успешно занесены.';
+        else echo 'Ошибка при записи в файл.';
+        fclose($fp); //Закрытие файла
     }
 
     public function save_xml()
     {
 
 
-        $list = $this->get_setting_feed(1);
+        $list = $this->get_setting_feed('category');
 
         $datas = $this->greateData();
 
@@ -152,8 +181,6 @@ $sql2 = mb_substr($sql, 0, -1);
 
             $entry = $dom->createElement('entry');
             $entry->appendChild($dom->createElement('g:id', $data['id']));
-           
-
 
 
             $entry->appendChild($dom->createElement('g:title', preg_replace('%&%', 'AND ', $data['name'])));
@@ -163,111 +190,141 @@ $sql2 = mb_substr($sql, 0, -1);
             $entry->appendChild($dom->createElement('g:link', $data['link']));
             $entry->appendChild($dom->createElement('g:image_link', $data['image']));
             $entry->appendChild($dom->createElement('g:price', $data['price']));
-            $entry->appendChild($dom->createElement('g:brand', $data['brend']));
+            $entry->appendChild($dom->createElement('g:brand', $data['brand']));
             $entry->appendChild($dom->createElement('g:type', $data['type']));
 
+            if(!empty($data['google_product_category'])){
+                $shipping =$dom->createElement("g:shipping");
+                $entry->appendChild($dom->createElement('g:condition', "new"));
+                $shipping->appendChild($dom->createElement('g:country', "UA"));
+                $shipping->appendChild($dom->createElement('g:service', "free_shipping"));
+                $entry->appendChild($shipping);
+                $entry->appendChild($dom->createElement('g:google_product_category', $data['google_product_category']));
+            }
 
             $feed->appendChild($entry);
-        
 
         }
 
 
         $dom->formatOutput = true;
+        var_dump($name);
         $dom->save($name . ".xml"); // Сохраняем полученный XML-документ в файл
         $path = ABSPATH . '/wp-admin/' . $name . '.xml';
         if (file_exists($path)) {
             $url = $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/wp-admin/' . $name . '.xml';
 
-            $this->save_setting($url, 2);
-            $this->save_setting(true, 3);
+            $this->save_setting($url, "url");
+            $this->save_setting(true, "on");
 
         }
 
     }
 
-    public function save_setting($post, $id = 1)
+    public function save_setting($post, $key = 'category')
     {
 
         global $wpdb;
         $table = $wpdb->prefix . 'pinta_feed_product_setting';
-       // if($wpdb->select($table, ['id' => 5))
-         $wpdb->delete($table, ['id' => 5]);
-        $wpdb->insert($table, ['id' => 5,'category'=>$post['feed']]);
-        if ((!empty($post['name-title']))&& (trim($post['name-title']) !== '')) {
-         $list['id'] = 4;
-          $list['category'] = $post['name-title'];
-          
-        $wpdb->insert($table, $list);
+        if(($key == 'url') || ($key == 'on')){
+            $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."'";
+            $res1 = $wpdb->get_row($k,ARRAY_A);
 
-        } else {
- $wpdb->delete($table, ['id' => 4]);
+            if(empty($res1)){
+                $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$post."','".$key."')";
+
+                $wpdb->query($s);
+            } else {
+                $l ="UPDATE ".$table." SET `category_name`='".$post."' WHERE `id`=".$res1['id']." ";
+                $wpdb->query($l);
+            }
+            return;
         }
 
-        $list['id'] = $id;
-        if ($id == 1) {
+        if (is_array($post['category_list'])) {
 
-            if (!empty($post['category_list'])) {
- var_dump($post);
-                foreach ($post['category_list'] as $key => $item) {
 
-                    if (($item == '1') ||($item == 'on')) {
-                        $arr[] = sanitize_text_field($key);
-                    }
+            foreach ($post['category_list'] as $keys=>$val){
+                if(($val == 1) || ($val == 'on')){
+                    $list['category_name'] = $keys;
+                    $list['key'] = $key;
+                    $list['category-google'] = $post['category_google'][$keys];
+                }
+                $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."' AND `category_name`='".$keys."' ";
+                $res3 = $wpdb->get_row($k,ARRAY_A);
+                if(empty($res3)){
+                    $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$keys."','".$key."')";
 
+                    $wpdb->query($s);
+                } else {
+                    $l ="UPDATE ".$table." SET `category_name`='".$keys."' WHERE `id`=".$res3['id']." ";
+                    $wpdb->query($l);
                 }
 
-                $list['ids'] = count($this->get_product_id($arr));
-                $list['category'] = serialize($arr);
-
-
             }
-        } else {
-            $list['category'] = sanitize_text_field($post);
 
         }
 
+        if(!empty($post['radio'])) {
 
-        $wpdb->delete($table, ['id' => $id]);
-        $wpdb->insert($table, $list);
+            $key = 'radio';
+            $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."'";
+            $resr = $wpdb->get_row($k,ARRAY_A);
+
+
+            if(empty($resr['id'])){
+
+                $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$post['radio']."','".$key."')";
+
+                $wpdb->query($s);
+            } else {
+                $l ="UPDATE ".$table." SET `category_name`='".$post['radio']."' WHERE id=".$resr['id']." ";
+                $wpdb->query($l);
+            }
+
+
+        }
+        if(!empty($post['name-title'])) {
+            $key = 'name-title';
+            $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."'  ";
+            $res4 = $wpdb->get_row($k,ARRAY_A);
+            if(empty($res4)){
+                $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$post['name-title']."','".$key."')";
+
+                $wpdb->query($s);
+            } else {
+                $l ="UPDATE ".$table." SET `category_name`='".$post['name-title']."' WHERE `id`=".$res3['id']." ";
+                $wpdb->query($l);
+            }
+            $wpdb->delete($table, ['key' => $key]);
+            $wpdb->insert($table, ['category_name'=>$post,'key'=>$key]);
+        } else {
+           // $wpdb->delete($table, ['key' => $key]);
+        }
+      /*  if(!empty($post['name-title'])) {
+            $key = 'name-title';
+
+            $wpdb->delete($table, ['key' => $key]);
+            $wpdb->insert($table, ['category_name'=>$post,'key'=>$key]);
+        }*/
+
 
 
     }
 
-    public function get_setting_feed($id = 1)
+    public function get_setting_feed($key ="")
     {
         $result = [];
         global $wpdb;
         $table = $wpdb->prefix . 'pinta_feed_product_setting';
-        $t = "SELECT category,ids FROM $table WHERE id=$id ";
+        $t = "SELECT * FROM ".$table." WHERE `key`='".$key."'  ";
 
-        $list = $wpdb->get_results($t);
+
+        $list = $wpdb->get_results($t,ARRAY_A);
+
         if (!empty($list)) {
 
-            if ($id == 1) {
-
-                $list_arr = unserialize($list[0]->category);
-                if ($list_arr !== null) {
-
-                    if ($list_arr === false) {
-
-
-                        return null;
-                    } else {
-                        foreach ($list_arr as $key => $item) {
-
-                            $result[$key] = $item;
-
-                        }
-                    }
-                } else {
-                    return null;
-                }
-            } else {
-                $result = $list[0]->category;
-            }
-
-            return $result;
+            return $list;
         }
         return null;
 
@@ -309,13 +366,17 @@ $sql2 = mb_substr($sql, 0, -1);
 
     public function greateData()
     {
-        $this->save_setting(false, 3);
-        $this->save_setting(false, 2);
-        $cat_list = $this->get_setting_feed(1);
-       
+        $this->save_setting(false, "url");
+        $this->save_setting(false, 'on');
+        $feed = $this->get_setting_feed('radio');
+        $cat_list2 = $this->get_setting_feed("category");
 
-
+        foreach ($cat_list2 as $val){
+            $cat_list[]= $val['category_name'];
+        }
         $products = $this->get_product_id($cat_list);
+
+
 
 
         foreach ($products as $product) {
@@ -324,36 +385,43 @@ $sql2 = mb_substr($sql, 0, -1);
             $category = wp_get_post_terms($id, 'product_cat', array("fields" => "names"));
 
             if (in_array($category[0], $cat_list) or (empty($category))) {
-               
-                if($this->check_title($id)){
-                $data['category'] = $category[0];
+
+                if ($this->check_title($id)) {
+                    $data['category'] = $category[0];
 
 
-                $data['id'] = $product->id;
-                $data['link'] = $product->link;
-                $product_s = wc_get_product($id);
-                $data['name'] = $product_s->get_title();
-                $data['description'] = $product_s->get_description();
-                $data['sku'] = $product_s->get_sku();
+                    $data['id'] = $product->id;
+                    $data['link'] = $product->link;
+                    $product_s = wc_get_product($id);
+                    $data['name'] = $product_s->get_title();
+                    $data['description'] = $product_s->get_description();
+                    $data['sku'] = $product_s->get_sku();
 
 
-                $data['price'] = $product_s->get_price();
-                $data['image'] = wp_get_attachment_url($product_s->get_image_id());
+                    $data['price'] = $product_s->get_price();
+                    $data['image'] = wp_get_attachment_url($product_s->get_image_id());
 
-                /* $category = wp_get_post_terms($id, 'product_cat', array("fields" => "names"));
-                 if (!empty($category)) {
-                     foreach ($category as $cat) {
-                         $data['category'][] = $cat;
-                     }
-                 }*/
-                $data['brend'] = $product_s->get_attribute('pa_brend');
-                $data['type'] = $product_s->get_attribute('pa_tip');
+                    if($feed[0]['category_name'] == 'facebook'){
+                        $data['google_product_category'] = $this->check_cat($category[0]);
 
+                    } else if($feed[0]['category_name'] == 'adwords'){
+                        $data['quantity'] = $this->check_quantity($product->id);
+                    }
 
-                $data['stock'] = $product_s->get_availability();
-                // $data['attr'] = $product_s->get_attributes();
-                $res[] = $data;
-            }
+                    /* $category = wp_get_post_terms($id, 'product_cat', array("fields" => "names"));
+                     if (!empty($category)) {
+                         foreach ($category as $cat) {
+                             $data['category'][] = $cat;
+                         }
+                     }*/
+                    $data['brand'] = $product_s->get_attribute('pa_brend');
+                    $data['type'] = $product_s->get_attribute('pa_tip');
+
+                    $ps =$product_s->get_availability();
+                    $data['stock'] = $ps['class'];
+                    // $data['attr'] = $product_s->get_attributes();
+                    $res[] = $data;
+                }
             }
 
         }
@@ -374,11 +442,38 @@ $sql2 = mb_substr($sql, 0, -1);
           exit;*/
         /*  setcookie('data_feed', serialize($res), time()+3600);
         echo 'ok';*/
-        
+
 
         return $res;
     }
 
+    public function check_quantity($id)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'wc_product_meta_lookup';
+        $s ="SELECT `stock_quantity` FROM ".$table."  WHERE `product_if`='".$id."' ";
+        $res = $wpdb->get_row($s,ARRAY_N);
+        var_dump($res);
+        return $res;
+    }
+
+    public function check_cat($cat,$ajax = false)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pinta_feed_product_setting';
+        $s ="SELECT `category-google`,`category_name` FROM ".$table."  WHERE `category_name`='".$cat."' ";
+        $res = $wpdb->get_row($s,ARRAY_A);
+        $table2 =$wpdb->prefix .'pinta_feed_product_google_category';
+
+        $k = "SELECT * FROM ".$table2."  WHERE `value`=".$res['category-google']." ";
+        $res2 = $wpdb->get_row($k,ARRAY_A);
+        if($ajax){
+            echo json_encode($res2);
+        } else {
+            return $res['category-google'];
+        }
+    return;
+    }
 
     public function obj_start()
     {
@@ -387,24 +482,27 @@ $sql2 = mb_substr($sql, 0, -1);
         return $this->greateData();
     }
 
-    public function check_title($id){
-         $name_title = !empty($this->get_setting_feed(4))? $this->get_setting_feed(4):'';
-        
-         if($name_title === ''){
-            return true;
-         } else {
-             $search = "#".mb_strtolower($name_title,'UTF-8')."#";
-                             $product_s = wc_get_product($id);
+    public function check_title($id)
+    {
+        $name_title = !empty($this->get_setting_feed("name-title")) ? $this->get_setting_feed("name-title") : '';
 
-             $str = mb_strtolower($product_s->get_title(),'UTF-8');
-            if(!preg_match($search, $str)){
+        if ($name_title[0]['category_name'] === '') {
+            return true;
+        } else {
+            $name = $name_title[0]['category_name'];
+
+            $search = "#" . mb_strtolower($name, 'UTF-8') . "#";
+            $product_s = wc_get_product($id);
+
+            $str = mb_strtolower($product_s->get_title(), 'UTF-8');
+            if (!preg_match($search, $str)) {
                 return true;
 
             } else {
                 return false;
             }
 
-         }
+        }
 
     }
 }

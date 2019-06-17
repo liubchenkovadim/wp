@@ -40,9 +40,10 @@ class Pinta_woocommerce_Feed_Product_Activator {
 
             $sql = "CREATE TABLE IF NOT EXISTS $table_name (
               `id` INT(11) NOT NULL AUTO_INCREMENT , 
-              `category` TEXT NOT NULL , 
-              `ids` TEXT NOT NULL , 
-              
+              `category_name` TEXT NOT NULL , 
+              `category-google` TEXT  , 
+               `key` TEXT NOT NULL , 
+
               PRIMARY KEY (`id`)
               ) ENGINE = MyISAM;
    ";

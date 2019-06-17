@@ -203,6 +203,14 @@ class Pinta_woocommerce_Feed_Product {
             $this->select_xml($_POST['cat']);
             exit;
         }
+        if($_GET['ajax'] == 'check_cat') {
+            $this->check_cat($_POST['id']);
+            exit;
+        }
+        if($_GET['ajax'] == 'csv') {
+            $this->save_csv($_POST['name']);
+            exit;
+        }
 	}
 
 
@@ -233,7 +241,13 @@ class Pinta_woocommerce_Feed_Product {
 
 
         }
+
     }
+    public function check_cat($cat){
+        $obj = new pinta_woocommerce_feed_product_save_xml();
+        $obj->check_cat($cat,true);
+    }
+
     public function select_xml($cat){
     	 $obj = new pinta_woocommerce_feed_product_save_xml();
         $obj->select_xml($cat);
@@ -243,14 +257,18 @@ class Pinta_woocommerce_Feed_Product {
         $obj = new pinta_woocommerce_feed_product_save_xml();
         $obj->save_xml();
     }
+    public function save_csv() {
+        $obj = new pinta_woocommerce_feed_product_save_xml();
+        $obj->save_csv();
+    }
     public function checkData() {
 	    $obj = new pinta_woocommerce_feed_product_save_xml();
-	     $check =$obj->get_setting_feed(3);
+	     $check =$obj->get_setting_feed("on");
 
-	     if($check == "1"){
-	         $result = $obj->get_setting_feed(2);
+	     if($check[0]['category_name'] == "1"){
+	         $result = $obj->get_setting_feed("url");
 
-            print $result;
+            print $result[0]["category_name"];
          }
 	     return false;
     }
