@@ -133,18 +133,43 @@ class Pinta_woocommerce_Feed_Product_save_xml
     public function  save_csv()
     {
 
-        $datas = $this->greateData();
-        var_dump($datas);
+
+
         $name = $_POST['name'];
-        $fp = fopen($name.'.csv', 'r');
-        $str = "Model,Title,Quantity,Price".PHP_EOL;
-        foreach ($datas as $data){
-            $str .= $data['brand'].",".$data['title'].",".$data['quantity'].",".$data['price'].PHP_EOL;
-        }
-        $test = fwrite($fp, $str); // Запись в файл
-        if ($test) echo 'Данные в файл успешно занесены.';
-        else echo 'Ошибка при записи в файл.';
-        fclose($fp); //Закрытие файла
+   
+        $this->save_setting(false, "url");
+        $this->save_setting(false, 'on');
+        $feed = $this->get_setting_feed('radio');
+        if($feed[0]['category_name'] == "adwords"){
+            $cat_list2 = $this->get_setting_feed("category");
+            $str = "Page URL, Custom label".PHP_EOL;
+            foreach ($cat_list2 as $val){
+                $cat_list[]= $val['category_name'];
+            }
+            $products = $this->get_product_id($cat_list);
+
+            foreach ($products as $product) {
+                $false = true;
+                $id = $product->id;
+                $category = wp_get_post_terms($id, 'product_cat', array("fields" => "names"));
+
+                if (in_array($category[0], $cat_list) or (empty($category))) {
+
+                    $product_s = wc_get_product($product->id);
+                    if(!preg_match("#Roberto#",$product_s->get_title())){
+                        $str .= $product->link.",".$product_s->get_title().PHP_EOL;
+                    }
+
+                }
+            }
+            header('Content-type: text/plain');
+            header('Content-Disposition: attachment; filename="'.$name.'.csv"');
+            print $str;
+            return ;
+        
+    }
+        
+      
     }
 
     public function save_xml()
@@ -242,10 +267,12 @@ class Pinta_woocommerce_Feed_Product_save_xml
         }
 
         if (is_array($post['category_list'])) {
+                $wpdb->delete($table,["key"=>'category']);
 
 
             foreach ($post['category_list'] as $keys=>$val){
                 if(($val == 1) || ($val == 'on')){
+
                     $list['category_name'] = $keys;
                     $list['key'] = $key;
                     $list['category-google'] = $post['category_google'][$keys];
@@ -376,9 +403,6 @@ class Pinta_woocommerce_Feed_Product_save_xml
         }
         $products = $this->get_product_id($cat_list);
 
-
-
-
         foreach ($products as $product) {
             $false = true;
             $id = $product->id;
@@ -404,10 +428,7 @@ class Pinta_woocommerce_Feed_Product_save_xml
                     if($feed[0]['category_name'] == 'facebook'){
                         $data['google_product_category'] = $this->check_cat($category[0]);
 
-                    } else if($feed[0]['category_name'] == 'adwords'){
-                        $data['quantity'] = $this->check_quantity($product->id);
                     }
-
                     /* $category = wp_get_post_terms($id, 'product_cat', array("fields" => "names"));
                      if (!empty($category)) {
                          foreach ($category as $cat) {
@@ -447,15 +468,7 @@ class Pinta_woocommerce_Feed_Product_save_xml
         return $res;
     }
 
-    public function check_quantity($id)
-    {
-        global $wpdb;
-        $table = $wpdb->prefix . 'wc_product_meta_lookup';
-        $s ="SELECT `stock_quantity` FROM ".$table."  WHERE `product_if`='".$id."' ";
-        $res = $wpdb->get_row($s,ARRAY_N);
-        var_dump($res);
-        return $res;
-    }
+
 
     public function check_cat($cat,$ajax = false)
     {

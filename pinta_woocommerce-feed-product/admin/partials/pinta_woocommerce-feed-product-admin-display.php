@@ -63,6 +63,7 @@ $categoties->list_category_facebook();
   <label for="adwords"> Adwords</label>
 <input type="radio" name="radio" value="adwords" <?php echo $adwords; ?>  ><br>
    </div>
+                <div>
             <input type="submit" class="button button-primary button-large button-salf" name="save" value="<?php _e('Save', 'PWFPL'); ?>">
             <input type="hidden" name="save_setting" value="save">
                 <div style="padding: 5px;">
@@ -70,6 +71,7 @@ $categoties->list_category_facebook();
                     <a> | </a>
                 <a id="d_all"><?php _e('Remove all', 'PWFPL'); ?></a>
         </div>
+                </div>
             </form>
         </div>
     </div>

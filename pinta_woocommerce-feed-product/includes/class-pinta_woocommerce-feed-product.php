@@ -259,6 +259,7 @@ class Pinta_woocommerce_Feed_Product {
     }
     public function save_csv() {
         $obj = new pinta_woocommerce_feed_product_save_xml();
+  
         $obj->save_csv();
     }
     public function checkData() {

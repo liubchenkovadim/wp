@@ -71,7 +71,7 @@
 		s('div.meter').removeAttr('style');
 		s('span#meter').css('width', i+'%');
 		if(i % 20 == 0){
-			location.reload();
+		//	location.reload();
 			var url = document.location.href + '&ajax=check';
 
 			//ajax_res(url);
