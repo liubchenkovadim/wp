@@ -43,6 +43,7 @@ class Pinta_woocommerce_Feed_Product_Activator {
               `category_name` TEXT NOT NULL , 
               `category-google` TEXT  , 
                `key` TEXT NOT NULL , 
+               `type` VARCHAR(10) NOT NULL
 
               PRIMARY KEY (`id`)
               ) ENGINE = MyISAM;

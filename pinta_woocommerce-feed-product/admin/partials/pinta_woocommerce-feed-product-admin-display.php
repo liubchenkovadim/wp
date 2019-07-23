@@ -2,10 +2,11 @@
 if (!defined('ABSPATH')) exit; // Exit if accessed directly
 
 $categoties = new Pinta_woocommerce_Feed_Product_save_xml();
+$radio =$categoties->get_setting_feed("radio");
 $list_category = $categoties->list_category();
 $feed = $categoties->get_setting_feed("url");
 
-$radio =$categoties->get_setting_feed("radio");
+
 $name = $categoties->get_setting_feed("name-title");
 $name_title = !empty($categoties->get_setting_feed("name-title"))?  $name[0]['category_name']:'';
 
@@ -145,6 +146,7 @@ $categoties->list_category_facebook();
                      url: url,
                     data: {cat:cat},
                     success: function(result){
+                        sel.siblings('.select_t').empty();
                         var data = $.parseJSON(result);
                               var count = Object.keys(data).length;                             
                               var option ='';                                

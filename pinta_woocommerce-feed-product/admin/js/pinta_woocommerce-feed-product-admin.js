@@ -74,10 +74,10 @@
 		//	location.reload();
 			var url = document.location.href + '&ajax=check';
 
-			//ajax_res(url);
+			ajax_res(url);
 		};
 		if (i == 100){
-		//	location.reload();
+			location.reload();
 		}
 
 	},1000);
@@ -93,13 +93,13 @@
 				success: function (response) {
 					var url = document.location.href + '&ajax=check';
 
-					//ajax_res(url);
+					ajax_res(url);
 				}
 			});
 
 		};
 
-	/*	function ajax_res(url) {
+		function ajax_res(url) {
 
 			s.ajax({
 				type: 'post',
@@ -111,12 +111,12 @@
 
 						s('a#url').attr('href', response);
 						s('a#url').text(response);
-					//	location.reload();
+						location.reload();
 					}
 				}
 			});
 
-		};*/
+		};
 
 	});
 })(jQuery);

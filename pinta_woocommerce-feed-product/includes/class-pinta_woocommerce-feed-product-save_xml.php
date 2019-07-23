@@ -5,11 +5,21 @@ class Pinta_woocommerce_Feed_Product_save_xml
 {
 
     private $data = array();
+    private $db;
+
+    public function __construct()
+    {
+        global $wpdb;
+        $this->db = $wpdb;
+    }
 
 
     public function list_category()
     {
-        $save_list = $this->get_setting_feed("category");
+       $radio = $this->get_setting_feed("radio");
+
+        $save_list = $this->get_setting_feed("category",$radio[0]['category_name']);
+
         if (empty($save_list)) {
             $save_list = array();
         }
@@ -60,10 +70,22 @@ class Pinta_woocommerce_Feed_Product_save_xml
 
     public function cat_gogle_first($name)
     {
+
         $setting = $this->get_setting_feed("radio");
+
 
         if ($setting[0]['category_name'] === "facebook") {
             $first_list = $this->list_category_facebook();
+            $check_google = $this->db->get_row("SELECT `category-google` FROM `dbpref_pinta_feed_product_setting` WHERE `category_name`='".$name."'",ARRAY_A);
+            if(isset($check_google['category-google']) && ($check_google['category-google'] !== 0)){
+                $gategor = $this->db->get_row("SELECT `category_name` FROM `dbpref_pinta_feed_product_google_category` WHERE `value`=".(int)$check_google['category-google'],ARRAY_A);
+                if(!empty($gategor['category_name'])){
+                    $cat_name = "<option selected='selected' value='".(int)$check_google['category-google']."' >".$gategor['category_name']."</option>";
+                } else {
+                    $cat_name = '';
+                }
+            }
+
 
             $select = "<select class='g_cat' >";
             $select .= "<option selected value='0' >--select--</option>";
@@ -72,7 +94,9 @@ class Pinta_woocommerce_Feed_Product_save_xml
                 $select .= "<option  value=" . $value['value'] . ">" . $value['category_list'] . "</option>";
             }
             $select .= "</select>
-<select class='select_t' name='category_google[" . $name . "]' data-category='" . $name . "'><option  value='0' >--select--</option></select>
+<select class='select_t' name='category_google[" . $name . "]' data-category='" . $name . "'><option  value='0' >--select--</option>
+".$cat_name."
+</select>
             ";
             return $select;
         }
@@ -140,8 +164,9 @@ class Pinta_woocommerce_Feed_Product_save_xml
         $this->save_setting(false, "url");
         $this->save_setting(false, 'on');
         $feed = $this->get_setting_feed('radio');
+
         if($feed[0]['category_name'] == "adwords"){
-            $cat_list2 = $this->get_setting_feed("category");
+            $cat_list2 = $this->get_setting_feed("category",$feed[0]['category_name']);
             $str = "Page URL, Custom label".PHP_EOL;
             foreach ($cat_list2 as $val){
                 $cat_list[]= $val['category_name'];
@@ -162,9 +187,10 @@ class Pinta_woocommerce_Feed_Product_save_xml
 
                 }
             }
-            header('Content-type: text/plain');
-            header('Content-Disposition: attachment; filename="'.$name.'.csv"');
-            print $str;
+           /* header('Content-type: text/plain');
+            header('Content-Disposition: attachment; filename="Adwords-Tesoro.csv"');
+            print $str;*/
+            file_put_contents($name.".csv",$str);
             return ;
         
     }
@@ -175,8 +201,8 @@ class Pinta_woocommerce_Feed_Product_save_xml
     public function save_xml()
     {
 
-
-        $list = $this->get_setting_feed('category');
+        $feed = $this->get_setting_feed("radio");
+        $list = $this->get_setting_feed('category',$feed[0]['category_name']);
 
         $datas = $this->greateData();
 
@@ -214,10 +240,10 @@ class Pinta_woocommerce_Feed_Product_save_xml
             $entry->appendChild($dom->createElement('g:category', $data['category']));
             $entry->appendChild($dom->createElement('g:link', $data['link']));
             $entry->appendChild($dom->createElement('g:image_link', $data['image']));
-            $entry->appendChild($dom->createElement('g:price', $data['price']));
+            $entry->appendChild($dom->createElement('g:price', $data['price']." UAH"));
             $entry->appendChild($dom->createElement('g:brand', $data['brand']));
             $entry->appendChild($dom->createElement('g:type', $data['type']));
-
+            $entry->appendChild($dom->createElement('g:availability', $data['stock']));
             if(!empty($data['google_product_category'])){
                 $shipping =$dom->createElement("g:shipping");
                 $entry->appendChild($dom->createElement('g:condition', "new"));
@@ -227,13 +253,14 @@ class Pinta_woocommerce_Feed_Product_save_xml
                 $entry->appendChild($dom->createElement('g:google_product_category', $data['google_product_category']));
             }
 
+
             $feed->appendChild($entry);
 
         }
 
 
         $dom->formatOutput = true;
-        var_dump($name);
+
         $dom->save($name . ".xml"); // Сохраняем полученный XML-документ в файл
         $path = ABSPATH . '/wp-admin/' . $name . '.xml';
         if (file_exists($path)) {
@@ -250,13 +277,14 @@ class Pinta_woocommerce_Feed_Product_save_xml
     {
 
         global $wpdb;
+
         $table = $wpdb->prefix . 'pinta_feed_product_setting';
         if(($key == 'url') || ($key == 'on')){
-            $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."'";
+            $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."' AND `type`='".$post['radio']."'";
             $res1 = $wpdb->get_row($k,ARRAY_A);
 
             if(empty($res1)){
-                $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$post."','".$key."')";
+                $s= "INSERT INTO ".$table." ( `category_name`, `key`,`type`) VALUES ('".$post."','".$key."','".$post['radio']."')";
 
                 $wpdb->query($s);
             } else {
@@ -267,7 +295,7 @@ class Pinta_woocommerce_Feed_Product_save_xml
         }
 
         if (is_array($post['category_list'])) {
-                $wpdb->delete($table,["key"=>'category']);
+                $wpdb->delete($table,["key"=>'category',"type"=>$post['radio']]);
 
 
             foreach ($post['category_list'] as $keys=>$val){
@@ -276,15 +304,18 @@ class Pinta_woocommerce_Feed_Product_save_xml
                     $list['category_name'] = $keys;
                     $list['key'] = $key;
                     $list['category-google'] = $post['category_google'][$keys];
+
                 }
-                $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."' AND `category_name`='".$keys."' ";
+                $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."' AND `category_name`='".$keys."' AND `type`='".$post['radio']."' ";
                 $res3 = $wpdb->get_row($k,ARRAY_A);
+
                 if(empty($res3)){
-                    $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$keys."','".$key."')";
+                    $s= "INSERT INTO ".$table." ( `category_name`, `key`,`category-google`,`type`) VALUES ('".$keys."','".$key."',".(int)$list['category-google'].",'".$post['radio']."')";
 
                     $wpdb->query($s);
                 } else {
-                    $l ="UPDATE ".$table." SET `category_name`='".$keys."' WHERE `id`=".$res3['id']." ";
+                    $l ="UPDATE ".$table." SET `category_name`='".$keys."',`category-google`=".(int)$list['category-google']." WHERE `id`=".$res3['id']."  AND `type`='".$post['radio']."'";
+
                     $wpdb->query($l);
                 }
 
@@ -301,7 +332,7 @@ class Pinta_woocommerce_Feed_Product_save_xml
 
             if(empty($resr['id'])){
 
-                $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$post['radio']."','".$key."')";
+                $s= "INSERT INTO ".$table." ( `category_name`, `key`,`type`) VALUES ('".$post['radio']."','".$key."','".$post['radio']."')";
 
                 $wpdb->query($s);
             } else {
@@ -311,20 +342,23 @@ class Pinta_woocommerce_Feed_Product_save_xml
 
 
         }
+
         if(!empty($post['name-title'])) {
             $key = 'name-title';
             $k ="SELECT `id` FROM ".$table." WHERE `key`='".$key."'  ";
+
             $res4 = $wpdb->get_row($k,ARRAY_A);
-            if(empty($res4)){
+
+            if(empty($res4['id'])){
                 $s= "INSERT INTO ".$table." ( `category_name`, `key`) VALUES ('".$post['name-title']."','".$key."')";
 
                 $wpdb->query($s);
             } else {
-                $l ="UPDATE ".$table." SET `category_name`='".$post['name-title']."' WHERE `id`=".$res3['id']." ";
+                $l ="UPDATE ".$table." SET `category_name`='".$post['name-title']."' WHERE `id`=".$res4['id']."  AND `type`='".$post['radio']."' ";
+
                 $wpdb->query($l);
             }
-            $wpdb->delete($table, ['key' => $key]);
-            $wpdb->insert($table, ['category_name'=>$post,'key'=>$key]);
+
         } else {
            // $wpdb->delete($table, ['key' => $key]);
         }
@@ -339,12 +373,13 @@ class Pinta_woocommerce_Feed_Product_save_xml
 
     }
 
-    public function get_setting_feed($key ="")
+    public function get_setting_feed($key ="",$type="")
     {
         $result = [];
         global $wpdb;
+
         $table = $wpdb->prefix . 'pinta_feed_product_setting';
-        $t = "SELECT * FROM ".$table." WHERE `key`='".$key."'  ";
+        $t = "SELECT * FROM ".$table." WHERE `key`='".$key."' AND `type`='".$type."' ";
 
 
         $list = $wpdb->get_results($t,ARRAY_A);
@@ -396,7 +431,7 @@ class Pinta_woocommerce_Feed_Product_save_xml
         $this->save_setting(false, "url");
         $this->save_setting(false, 'on');
         $feed = $this->get_setting_feed('radio');
-        $cat_list2 = $this->get_setting_feed("category");
+        $cat_list2 = $this->get_setting_feed("category",$feed[0]['category_name']);
 
         foreach ($cat_list2 as $val){
             $cat_list[]= $val['category_name'];
@@ -439,7 +474,8 @@ class Pinta_woocommerce_Feed_Product_save_xml
                     $data['type'] = $product_s->get_attribute('pa_tip');
 
                     $ps =$product_s->get_availability();
-                    $data['stock'] = $ps['class'];
+
+                    $data['stock'] = ($ps['class'] =="in-stock")? "in stock":"";
                     // $data['attr'] = $product_s->get_attributes();
                     $res[] = $data;
                 }
